@@ -122,12 +122,12 @@ with st.sidebar:
         st.rerun()
 
 # --- 6. ÁREA DE MENSAGENS ---
-st.image("sophos.png", width=70) # Ajuste a largura conforme necessário
+st.image("Projeto_IA/sophos.png", width=70) # Ajuste a largura conforme necessário
 
 # Exibe histórico do chat selecionado
 for msg in st.session_state.historico_chats[st.session_state.chat_ativo]:
     # Define o ícone: se for assistente usa a logo, se for usuário usa outro ou deixa padrão
-    icone = "logo_sophos.png" if msg["role"] == "assistant" else "user_icon.png"
+    icone = "Projeto_IA/logo_sophos.png" if msg["role"] == "assistant" else "Projeto_IA/user_icon.png"
     
     with st.chat_message(msg["role"], avatar=icone):
         if msg["type"] == "text":
@@ -139,10 +139,10 @@ for msg in st.session_state.historico_chats[st.session_state.chat_ativo]:
 if prompt := st.chat_input("Como posso te ajudar?"):
     # Salva e exibe pergunta
     st.session_state.historico_chats[st.session_state.chat_ativo].append({"role": "user", "content": prompt, "type": "text"})
-    with st.chat_message("user", avatar="user_icon.png"):
+    with st.chat_message("user", avatar="Projeto_IA/user_icon.png"):
         st.markdown(prompt)
 
-    with st.chat_message("assistant", avatar="logo_sophos.png"):
+    with st.chat_message("assistant", avatar="Projeto_IA/logo_sophos.png"):
         # LÓGICA DE IMAGEM
         if any(p in prompt.lower() for p in ["crie", "gere", "desenhe", "foto", "imagem"]):
             with st.spinner("🎨 Sophos desenhando..."):
@@ -164,4 +164,5 @@ if prompt := st.chat_input("Como posso te ajudar?"):
                     {"role": "assistant", "content": response.text, "type": "text"}
                 )
             except Exception as e:
+
                 st.error(f"Erro no Sophos: {e}")
