@@ -52,7 +52,7 @@ def buscar_imagem(prompt):
     prompt_limpo = prompt.lower().replace("crie", "").replace("gere", "").strip()
     prompt_enc = requests.utils.quote(prompt_limpo)
     
-    url = f"https://gen.pollinations.ai/prompt/{prompt_enc}"
+    url = f"https://gen.pollinations.ai/prompt/{prompt_enc}?model=flux"
     
     # Cabeçalhos com a sua chave secreta
     headers = {
@@ -189,6 +189,7 @@ if prompt := st.chat_input("Como posso te ajudar?"):
             except Exception as e:
 
                 st.error(f"Erro no Sophos: {e}")
+
 
 
 
