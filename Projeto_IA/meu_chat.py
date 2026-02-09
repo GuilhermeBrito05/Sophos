@@ -9,6 +9,7 @@ from PIL import Image
 # Substitua pela sua chave do Google AI Studio
 try:
     GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
+    POLLINATIONS_API_KEY = st.secrets["POLLINATIONS_APY_KEY"]
     genai.configure(api_key=GOOGLE_API_KEY)
 except KeyError:
     st.error("Erro: A chave GOOGLE_API_KEY não foi configurada nos Secrets do Streamlit.")
@@ -42,24 +43,42 @@ if not st.session_state.chat_ativo:
 
 # --- 4. FUNÇÃO RESILIENTE DE IMAGEM (ANTI-RATE LIMIT) ---
 def buscar_imagem(prompt):
-    prompt_enc = requests.utils.quote(prompt)
-    seed = datetime.datetime.now().microsecond
+    prompt_limpo = prompt.lower().replace("crie", "").replace("gere", "").strip()
+    prompt_enc = requests.utils.quote(prompt_limpo)
     
-    # Lista de motores: 1. IA (Pollinations) | 2. Fotos Reais (Unsplash/LoremFlickr)
-    urls = [
-        f"https://image.pollinations.ai/prompt/{prompt_enc}?width=1024&height=1024&seed={seed}&nologo=true&model=flux",
-        f"https://loremflickr.com/1024/1024/{prompt_enc.split('%20')[-1]}" # Busca por palavra-chave se IA falhar
-    ]
+    # URL da API (verifique na documentação deles se o endpoint mudou, 
+    # geralmente é algo como /generate ou similar)
+    url = f"https://image.pollinations.ai/prompt/{prompt_enc}"
     
-    for url in urls:
-        try:
-            r = requests.get(url, timeout=20)
-            if r.status_code == 200 and "image" in r.headers.get("Content-Type", ""):
-                return r.content
-        except:
-            continue
-    return None
+    # Cabeçalhos com a sua chave secreta
+    headers = {
+        "Authorization": f"Bearer {POLLINATIONS_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    
+    # Parâmetros adicionais que costumam pedir em APIs com Key
+    params = {
+        "model": "flux",
+        "width": 1024,
+        "height": 1024,
+        "nologo": True
+    }
 
+    try:
+        # Fazendo a requisição passando os headers com a Key
+        r = requests.get(url, headers=headers, params=params, timeout=30)
+        
+        if r.status_code == 200:
+            return r.content
+        elif r.status_code == 401:
+            st.error("Erro de Autenticação: Verifique sua Pollinations Key.")
+        else:
+            st.error(f"Erro na API: Status {r.status_code}")
+    except Exception as e:
+        st.error(f"Erro na conexão: {e}")
+        
+    return None
+    
 # --- 5. INTERFACE STREAMLIT ---
 st.set_page_config(page_title="Sophos", layout="wide", page_icon="logo_sophos.png")
 
@@ -166,3 +185,4 @@ if prompt := st.chat_input("Como posso te ajudar?"):
             except Exception as e:
 
                 st.error(f"Erro no Sophos: {e}")
+
