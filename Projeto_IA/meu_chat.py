@@ -178,7 +178,6 @@ if prompt := st.chat_input("Como posso te ajudar?"):
     with st.chat_message("assistant", avatar="Projeto_IA/logo_sophos.png"):
 
     # Leitura de arquivos
-    else:
         try:
             conteudo_para_envio = [prompt]
             
@@ -248,4 +247,5 @@ if prompt := st.chat_input("Como posso te ajudar?"):
                 )
             except Exception as e:
                 st.error(f"Erro no Sophos: {e}")
+
 
