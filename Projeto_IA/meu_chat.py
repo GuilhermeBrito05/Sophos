@@ -147,13 +147,11 @@ with st.sidebar:
         st.rerun()
 
 # --- 6. ÁREA DE MENSAGENS ---
-st.image("Projeto_IA/sophos.png", width=70) # Ajuste a largura conforme necessário
+st.image("Projeto_IA/sophos.png", width=70) 
 
-# Exibe histórico do chat selecionado
+# Exibe histórico do chat
 for msg in st.session_state.historico_chats[st.session_state.chat_ativo]:
-    # Define o ícone: se for assistente usa a logo, se for usuário usa outro ou deixa padrão
     icone = "Projeto_IA/logo_sophos.png" if msg["role"] == "assistant" else "Projeto_IA/user_icon.png"
-    
     with st.chat_message(msg["role"], avatar=icone):
         if msg["type"] == "text":
             st.markdown(msg["content"])
@@ -162,49 +160,50 @@ for msg in st.session_state.historico_chats[st.session_state.chat_ativo]:
 
 # Entrada do usuário
 if prompt := st.chat_input("Como posso te ajudar?"):
-    # Salva e exibe pergunta
     st.session_state.historico_chats[st.session_state.chat_ativo].append({"role": "user", "content": prompt, "type": "text"})
     with st.chat_message("user", avatar="Projeto_IA/user_icon.png"):
         st.markdown(prompt)
 
     with st.chat_message("assistant", avatar="Projeto_IA/logo_sophos.png"):
-        # LÓGICA DE IMAGEM
+        
+        # 1. VERIFICA SE É UM PEDIDO DE IMAGEM
         if any(p in prompt.lower() for p in ["crie", "gere", "desenhe", "foto", "imagem"]):
-            with st.spinner("🎨 Sophos desenhando..."):
-                img_data = buscar_imagem(prompt)
+            
+            # CAMADA DE INTELIGÊNCIA: Gemini refinando o prompt
+            with st.spinner("🤖 Sophos está idealizando a arte..."):
+                comando_refinamento = f"""
+                Você é um especialista em engenharia de prompt para IA de imagem (modelo FLUX).
+                O usuário pediu: '{prompt}'.
+                Se baseie no histórico para manter consistência se necessário.
+                Crie um prompt detalhado, em INGLÊS, com estilos artísticos, iluminação e alta resolução.
+                Responda APENAS com o novo prompt, sem comentários.
+                """
+                try:
+                    # O Gemini gera o prompt em inglês para a outra IA
+                    prompt_ai = model_gemini.generate_content(comando_refinamento).text
+                    st.caption(f"✨ Prompt refinado: {prompt_ai[:100]}...") # Mostra uma prévia do que a IA pensou
+                except:
+                    prompt_ai = prompt # Fallback caso o Gemini falhe
+            
+            # 2. GERAÇÃO DA IMAGEM COM O PROMPT REFINADO
+            with st.spinner("🎨 Sophos está desenhando..."):
+                img_data = buscar_imagem(prompt_ai)
                 if img_data:
                     st.image(img_data)
                     st.session_state.historico_chats[st.session_state.chat_ativo].append(
                         {"role": "assistant", "content": img_data, "type": "image"}
                     )
                 else:
-                    st.error("Servidores de imagem ocupados. Tente um prompt mais simples.")
+                    st.error("Desculpe, não consegui completar o desenho agora.")
         
-        # LÓGICA DE TEXTO
+        # 3. LÓGICA DE TEXTO NORMAL
         else:
             try:
+                # Aqui o Gemini responde normalmente
                 response = model_gemini.generate_content(prompt)
                 st.markdown(response.text)
                 st.session_state.historico_chats[st.session_state.chat_ativo].append(
                     {"role": "assistant", "content": response.text, "type": "text"}
                 )
             except Exception as e:
-
                 st.error(f"Erro no Sophos: {e}")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
