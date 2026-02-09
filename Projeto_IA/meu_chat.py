@@ -59,7 +59,7 @@ def buscar_imagem(prompt):
     
     # 2. A URL oficial para o modelo FLUX via API
     # Mudamos para o subdomínio que aceita parâmetros de busca limpos
-    url = "https://image.pollinations.ai/prompt/" + prompt_enc
+    url = "https://gen.pollinations.ai/prompt/" + prompt_enc
     
     # 3. Parâmetros na Query String (conforme o padrão que você viu nos docs)
     params = {
@@ -197,6 +197,7 @@ if prompt := st.chat_input("Como posso te ajudar?"):
             except Exception as e:
 
                 st.error(f"Erro no Sophos: {e}")
+
 
 
 
