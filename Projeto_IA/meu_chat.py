@@ -146,6 +146,17 @@ with st.sidebar:
         st.session_state.chat_ativo = None
         st.rerun()
 
+    st.divider()
+    st.subheader("📎 Anexar Arquivos")
+    arquivo_upload = st.file_uploader(
+        "Analise fotos ou documentos (PDF, TXT)", 
+        type=["png", "jpg", "jpeg", "pdf", "txt"],
+        help="O Sophos pode ler o conteúdo e tirar dúvidas!"
+    )
+    
+    if arquivo_upload:
+        st.success(f"Arquivo '{arquivo_upload.name}' carregado!")
+
 # --- 6. ÁREA DE MENSAGENS ---
 st.image("Projeto_IA/sophos.png", width=70) 
 
@@ -165,6 +176,36 @@ if prompt := st.chat_input("Como posso te ajudar?"):
         st.markdown(prompt)
 
     with st.chat_message("assistant", avatar="Projeto_IA/logo_sophos.png"):
+
+    # Leitura de arquivos
+    else:
+        try:
+            conteudo_para_envio = [prompt]
+            
+            # Se houver um arquivo carregado, ele entra na lista para o Gemini
+            if arquivo_upload is not None:
+                with st.spinner("📑 Lendo arquivo..."):
+                    bytes_data = arquivo_upload.read()
+                    
+                    # Verifica se é imagem ou documento
+                    if arquivo_upload.type in ["image/png", "image/jpeg"]:
+                        imagem_analise = Image.open(io.BytesIO(bytes_data))
+                        conteudo_para_envio.append(imagem_analise)
+                    else:
+                        # Para PDF/TXT, enviamos como string ou bytes dependendo da versão
+                        # O Gemini 1.5 Flash aceita bytes diretamente para documentos
+                        conteudo_para_envio.append({"mime_type": arquivo_upload.type, "data": bytes_data})
+    
+            # O Gemini processa TUDO (texto + imagem/documento)
+            response = model_gemini.generate_content(conteudo_para_envio)
+            
+            st.markdown(response.text)
+            st.session_state.historico_chats[st.session_state.chat_ativo].append(
+                {"role": "assistant", "content": response.text, "type": "text"}
+            )
+            
+        except Exception as e:
+            st.error(f"Erro ao analisar arquivo: {e}")
         
         # 1. VERIFICA SE É UM PEDIDO DE IMAGEM
         if any(p in prompt.lower() for p in ["crie", "gere", "desenhe", "foto", "imagem"]):
@@ -207,3 +248,4 @@ if prompt := st.chat_input("Como posso te ajudar?"):
                 )
             except Exception as e:
                 st.error(f"Erro no Sophos: {e}")
+
