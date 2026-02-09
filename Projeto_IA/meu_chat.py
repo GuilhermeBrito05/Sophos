@@ -15,10 +15,10 @@ try:
     else:
         faltando = []
         if "GOOGLE_API_KEY" not in st.secrets: faltando.append("GOOGLE_API_KEY")
-            if "POLLINATIONS_API_KEY" not in st.secrets: faltando.append("POLLINATIONS_API_KEY")
-            st.error(f"⚠️ Chaves faltando nos Secrets: {', '.join(faltando)}")
-    except Exception as e:
-        st.error(f"Erro crítico ao carregar segredos 🤫: {e}")
+        if "POLLINATIONS_API_KEY" not in st.secrets: faltando.append("POLLINATIONS_API_KEY")
+        st.error(f"⚠️ Chaves faltando nos Secrets: {', '.join(faltando)}")
+except Exception as e:
+    st.error(f"Erro crítico ao carregar segredos 🤫: {e}")
 
 # --- 2. FUNÇÃO DE IA ---
 @st.cache_resource
@@ -191,6 +191,7 @@ if prompt := st.chat_input("Como posso te ajudar?"):
             except Exception as e:
 
                 st.error(f"Erro no Sophos: {e}")
+
 
 
 
