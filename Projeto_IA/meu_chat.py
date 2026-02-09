@@ -13,6 +13,7 @@ try:
     genai.configure(api_key=GOOGLE_API_KEY)
 except KeyError:
     st.error("Erro: A chave GOOGLE_API_KEY não foi configurada nos Secrets do Streamlit.")
+    st.error("Erro: A chave POLLINATIONS_API_KEY não foi configurada nos Secrets do Streamlit)
 
 # --- 2. FUNÇÃO DE IA ---
 @st.cache_resource
@@ -185,4 +186,5 @@ if prompt := st.chat_input("Como posso te ajudar?"):
             except Exception as e:
 
                 st.error(f"Erro no Sophos: {e}")
+
 
