@@ -49,7 +49,6 @@ if not st.session_state.chat_ativo:
 
 # --- 4. FUNÇÃO RESILIENTE DE IMAGEM (ANTI-RATE LIMIT) ---
 def buscar_imagem(prompt):
-    # 1. Limpeza do prompt
     for p in ["crie", "gere", "desenhe", "imagem", "foto", "de um", "uma"]:
         prompt = prompt.lower().replace(p, "")
     
@@ -57,33 +56,32 @@ def buscar_imagem(prompt):
     # Codifica espaços como %20
     prompt_enc = requests.utils.quote(prompt_final)
     
-    # 2. URL Identêntica à que você viu nos DOCS (gen.pollinations.ai)
-    # Adicionamos um seed aleatório para evitar cache de erro
     import random
     seed = random.randint(0, 999999)
     url = f"https://gen.pollinations.ai/image/{prompt_enc}?model=flux&seed={seed}&nologo=true"
-    
-    # 3. Headers (A Key vai aqui)
     headers = {
         "Authorization": f"Bearer {st.secrets['POLLINATIONS_API_KEY']}"
     }
     
     try:
         # Request simples
-        response = requests.get(url, headers=headers, timeout=30)
+        response = requests.get(url, headers=headers, (timeout=10,120))
         
         if response.status_code == 200:
             # Se retornar imagem, sucesso
             if "image" in response.headers.get("Content-Type", ""):
                 return response.content
             else:
-                st.error("O servidor respondeu, mas não enviou uma imagem válida.")
+                st.error("Resposta recebida, mas não é uma imagem.")
+        elif response.status_code == 429:
+            st.warning("Muitas requisições! Aguarde um momento e tente novamente.")
         else:
-            # Mostra o erro exato para diagnóstico
-            st.error(f"Erro na API: {response.status_code} - {response.text}")
+            st.error(f"Erro na API: {response.status_code}")
             
+    except requests.exceptions.Timeout:
+        st.error("⌛ O Sophos demorou muito para desenhar. A fila da API deve estar cheia. Tente novamente em instantes.")
     except Exception as e:
-        st.error(f"Erro de conexão: {e}")
+        st.error(f"Erro inesperado: {e}")
         
     return None
     
@@ -193,6 +191,7 @@ if prompt := st.chat_input("Como posso te ajudar?"):
             except Exception as e:
 
                 st.error(f"Erro no Sophos: {e}")
+
 
 
 
