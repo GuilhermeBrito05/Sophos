@@ -11,4 +11,4 @@ Chat IA em aprimoramento.
 
 
 ### Como acessar
-O link a seguir, levará diretamente para o chat Sophos:<br>[Sophos](https://sophos-ia.streamlit.app/)
+O link a seguir levará diretamente para o chat Sophos:<br>[Sophos](https://sophos-ia.streamlit.app/)
