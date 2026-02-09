@@ -58,7 +58,7 @@ def buscar_imagem(prompt):
     
     import random
     seed = random.randint(0, 999999)
-    url = f"https://gen.pollinations.ai/image/{prompt_enc}?model=flux&seed={seed}&nologo=true"
+    url = f"https://gen.pollinations.ai/image/{prompt_enc}?model=flux-2-dev&seed={seed}&nologo=true"
     headers = {
         "Authorization": f"Bearer {st.secrets['POLLINATIONS_API_KEY']}"
     }
@@ -191,6 +191,7 @@ if prompt := st.chat_input("Como posso te ajudar?"):
             except Exception as e:
 
                 st.error(f"Erro no Sophos: {e}")
+
 
 
 
