@@ -10,7 +10,7 @@ from PIL import Image
 try:
     if "GOOGLE_API_KEY" in st.secrets and "POLLINATIONS_API_KEY" in st.secrets:
         GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
-        POLLINATIONS_API_KEY = st.secrets["POLLINATIONS_APY_KEY"]
+        POLLINATIONS_API_KEY = st.secrets["POLLINATIONS_API_KEY"]
         genai.configure(api_key=GOOGLE_API_KEY)
     else:
         faltando = []
@@ -191,6 +191,7 @@ if prompt := st.chat_input("Como posso te ajudar?"):
             except Exception as e:
 
                 st.error(f"Erro no Sophos: {e}")
+
 
 
 
