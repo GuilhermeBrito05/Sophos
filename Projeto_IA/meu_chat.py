@@ -49,37 +49,46 @@ if not st.session_state.chat_ativo:
 
 # --- 4. FUNÇÃO RESILIENTE DE IMAGEM (ANTI-RATE LIMIT) ---
 def buscar_imagem(prompt):
-    prompt_limpo = prompt.lower().replace("crie", "").replace("gere", "").strip()
-    prompt_enc = requests.utils.quote(prompt_limpo)
+    # 1. Limpeza rigorosa do prompt
+    # Remove palavras de comando e garante que não esteja vazio
+    for palavra in ["crie", "gere", "desenhe", "imagem", "foto", "de um", "uma"]:
+        prompt = prompt.lower().replace(palavra, "")
     
-    url = f"https://gen.pollinations.ai/prompt/{prompt_enc}?model=flux"
+    prompt_final = prompt.strip()
+    if not prompt_final:
+        prompt_final = "abstract art" # Fallback caso o prompt fique vazio
+        
+    # 2. Codificação segura
+    prompt_enc = requests.utils.quote(prompt_final)
     
-    # Cabeçalhos com a sua chave secreta
+    # 3. URL no formato exato da nova documentação
+    # Algumas versões da API preferem o prompt como parâmetro query
+    url = f"https://gen.pollinations.ai/prompt/{prompt_enc}?model=flux&seed=42&width=1024&height=1024&nologo=true"
+    
     headers = {
-        "Authorization": f"Bearer {POLLINATIONS_API_KEY}",
-        "Content-Type": "application/json"
+        "Authorization": f"Bearer {st.secrets['POLLINATIONS_API_KEY']}"
     }
     
-    # Parâmetros adicionais que costumam pedir em APIs com Key
-    params = {
-        "model": "flux",
-        "width": 1024,
-        "height": 1024,
-        "nologo": True
-    }
-
     try:
-        # Fazendo a requisição passando os headers com a Key
-        r = requests.get(url, headers=headers, params=params, timeout=30)
+        # Usamos GET porque você viu o link funcionando direto no navegador
+        r = requests.get(url, headers=headers, timeout=30)
         
         if r.status_code == 200:
             return r.content
+        elif r.status_code == 404:
+            # TENTATIVA DE BACKUP: Caso o formato /prompt/ falhe, tenta /image/
+            url_backup = f"https://gen.pollinations.ai/image/{prompt_enc}?model=flux"
+            r_backup = requests.get(url_backup, headers=headers, timeout=30)
+            if r_backup.status_code == 200:
+                return r_backup.content
+            st.error("Erro 404: O endpoint da API mudou novamente ou o prompt é inválido.")
         elif r.status_code == 401:
-            st.error("Erro de Autenticação: Verifique sua Pollinations Key.")
+            st.error("Erro 401: Chave de API (Secret) inválida ou expirada.")
         else:
             st.error(f"Erro na API: Status {r.status_code}")
+            
     except Exception as e:
-        st.error(f"Erro na conexão: {e}")
+        st.error(f"Erro de conexão: {e}")
         
     return None
     
@@ -189,6 +198,7 @@ if prompt := st.chat_input("Como posso te ajudar?"):
             except Exception as e:
 
                 st.error(f"Erro no Sophos: {e}")
+
 
 
 
