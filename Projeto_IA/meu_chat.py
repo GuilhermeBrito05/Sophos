@@ -49,48 +49,47 @@ if not st.session_state.chat_ativo:
 
 # --- 4. FUNÇÃO RESILIENTE DE IMAGEM (ANTI-RATE LIMIT) ---
 def buscar_imagem(prompt):
-    # 1. Limpeza rigorosa do prompt
-    # Remove palavras de comando e garante que não esteja vazio
-    for palavra in ["crie", "gere", "desenhe", "imagem", "foto", "de um", "uma"]:
-        prompt = prompt.lower().replace(palavra, "")
+    # 1. Preparação do prompt
+    # Remove palavras de comando para não confundir a IA
+    for p in ["crie", "gere", "desenhe", "imagem", "foto"]:
+        prompt = prompt.lower().replace(p, "")
     
-    prompt_final = prompt.strip()
-    if not prompt_final:
-        prompt_final = "abstract art" # Fallback caso o prompt fique vazio
-        
-    # 2. Codificação segura
+    prompt_final = prompt.strip() or "cyberpunk city"
     prompt_enc = requests.utils.quote(prompt_final)
     
-    # 3. URL no formato exato da nova documentação
-    # Algumas versões da API preferem o prompt como parâmetro query
-    url = f"https://gen.pollinations.ai/prompt/{prompt_enc}?model=flux&seed=42&width=1024&height=1024&nologo=true"
+    # 2. A URL oficial para o modelo FLUX via API
+    # Mudamos para o subdomínio que aceita parâmetros de busca limpos
+    url = "https://image.pollinations.ai/prompt/" + prompt_enc
     
+    # 3. Parâmetros na Query String (conforme o padrão que você viu nos docs)
+    params = {
+        "model": "flux",
+        "width": 1024,
+        "height": 1024,
+        "nologo": "true",
+        "enhance": "false", # Tente false primeiro para ser mais rápido
+        "seed": datetime.datetime.now().microsecond # Garante que a imagem seja nova
+    }
+    
+    # 4. Headers de Autenticação
     headers = {
         "Authorization": f"Bearer {st.secrets['POLLINATIONS_API_KEY']}"
     }
     
     try:
-        # Usamos GET porque você viu o link funcionando direto no navegador
-        r = requests.get(url, headers=headers, timeout=30)
+        # Fazemos a requisição com params e headers separados
+        response = requests.get(url, headers=headers, params=params, timeout=30)
         
-        if r.status_code == 200:
-            return r.content
-        elif r.status_code == 404:
-            # TENTATIVA DE BACKUP: Caso o formato /prompt/ falhe, tenta /image/
-            url_backup = f"https://gen.pollinations.ai/image/{prompt_enc}?model=flux"
-            r_backup = requests.get(url_backup, headers=headers, timeout=30)
-            if r_backup.status_code == 200:
-                return r_backup.content
-            st.error("Erro 404: O endpoint da API mudou novamente ou o prompt é inválido.")
-        elif r.status_code == 401:
-            st.error("Erro 401: Chave de API (Secret) inválida ou expirada.")
+        if response.status_code == 200:
+            return response.content
         else:
-            st.error(f"Erro na API: Status {r.status_code}")
+            # Isso vai nos mostrar o erro real no console do Streamlit
+            st.error(f"Detalhe do erro: {response.status_code} - {response.text[:100]}")
+            return None
             
     except Exception as e:
         st.error(f"Erro de conexão: {e}")
-        
-    return None
+        return None
     
 # --- 5. INTERFACE STREAMLIT ---
 st.set_page_config(page_title="Sophos", layout="wide", page_icon="logo_sophos.png")
@@ -198,6 +197,7 @@ if prompt := st.chat_input("Como posso te ajudar?"):
             except Exception as e:
 
                 st.error(f"Erro no Sophos: {e}")
+
 
 
 
