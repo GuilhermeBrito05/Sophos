@@ -1,4 +1,5 @@
 streamlit
 google-generativeai
 requests
-Pillow
+pillow
+streamlit-authenticator @ git+https://github.com/mkhorasani/Streamlit-Authenticator.git
