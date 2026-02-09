@@ -65,7 +65,7 @@ def buscar_imagem(prompt):
     
     try:
         # Request simples
-        response = requests.get(url, headers=headers, (timeout=10,120))
+        response = requests.get(url, headers=headers, timeout=(10,120))
         
         if response.status_code == 200:
             # Se retornar imagem, sucesso
@@ -191,6 +191,7 @@ if prompt := st.chat_input("Como posso te ajudar?"):
             except Exception as e:
 
                 st.error(f"Erro no Sophos: {e}")
+
 
 
 
