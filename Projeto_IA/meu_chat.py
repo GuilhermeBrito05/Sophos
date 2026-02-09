@@ -49,47 +49,43 @@ if not st.session_state.chat_ativo:
 
 # --- 4. FUNÇÃO RESILIENTE DE IMAGEM (ANTI-RATE LIMIT) ---
 def buscar_imagem(prompt):
-    # 1. Preparação do prompt
-    # Remove palavras de comando para não confundir a IA
-    for p in ["crie", "gere", "desenhe", "imagem", "foto"]:
+    # 1. Limpeza do prompt
+    for p in ["crie", "gere", "desenhe", "imagem", "foto", "de um", "uma"]:
         prompt = prompt.lower().replace(p, "")
     
-    prompt_final = prompt.strip() or "cyberpunk city"
+    prompt_final = prompt.strip() or "nature landscape"
+    # Codifica espaços como %20
     prompt_enc = requests.utils.quote(prompt_final)
     
-    # 2. A URL oficial para o modelo FLUX via API
-    # Mudamos para o subdomínio que aceita parâmetros de busca limpos
-    url = "https://gen.pollinations.ai/prompt/" + prompt_enc
+    # 2. URL Identêntica à que você viu nos DOCS (gen.pollinations.ai)
+    # Adicionamos um seed aleatório para evitar cache de erro
+    import random
+    seed = random.randint(0, 999999)
+    url = f"https://gen.pollinations.ai/image/{prompt_enc}?model=flux&seed={seed}&nologo=true"
     
-    # 3. Parâmetros na Query String (conforme o padrão que você viu nos docs)
-    params = {
-        "model": "flux",
-        "width": 1024,
-        "height": 1024,
-        "nologo": "true",
-        "enhance": "false", # Tente false primeiro para ser mais rápido
-        "seed": datetime.datetime.now().microsecond # Garante que a imagem seja nova
-    }
-    
-    # 4. Headers de Autenticação
+    # 3. Headers (A Key vai aqui)
     headers = {
         "Authorization": f"Bearer {st.secrets['POLLINATIONS_API_KEY']}"
     }
     
     try:
-        # Fazemos a requisição com params e headers separados
-        response = requests.get(url, headers=headers, params=params, timeout=30)
+        # Request simples
+        response = requests.get(url, headers=headers, timeout=30)
         
         if response.status_code == 200:
-            return response.content
+            # Se retornar imagem, sucesso
+            if "image" in response.headers.get("Content-Type", ""):
+                return response.content
+            else:
+                st.error("O servidor respondeu, mas não enviou uma imagem válida.")
         else:
-            # Isso vai nos mostrar o erro real no console do Streamlit
-            st.error(f"Detalhe do erro: {response.status_code} - {response.text[:100]}")
-            return None
+            # Mostra o erro exato para diagnóstico
+            st.error(f"Erro na API: {response.status_code} - {response.text}")
             
     except Exception as e:
         st.error(f"Erro de conexão: {e}")
-        return None
+        
+    return None
     
 # --- 5. INTERFACE STREAMLIT ---
 st.set_page_config(page_title="Sophos", layout="wide", page_icon="logo_sophos.png")
@@ -197,6 +193,7 @@ if prompt := st.chat_input("Como posso te ajudar?"):
             except Exception as e:
 
                 st.error(f"Erro no Sophos: {e}")
+
 
 
 
