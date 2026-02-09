@@ -3,7 +3,35 @@ import google.generativeai as genai
 import datetime
 import requests
 import io
+import streamlit-authenticator as stauth
+import yaml
+from yaml.loader import SafeLoader
 from PIL import Image
+
+# --- SISTEMA DE LOGIN ---
+with open ('config.yaml') as file:
+    config = yaml.load(file, Loader=SafeLoader)
+
+authenticator = stauth.Authenticate(
+    config['credentials']
+    config['cookie']['name]
+    config['cookie']['key']
+    config['cookie']['expiry_days']
+    config['preauthorized']
+)
+name, authentication_status, username = authenticator.login('Login', 'main')
+
+if authentication_status == False:
+    st.error('Usuário/Senha incorretos')
+    st.stop() # Interrompe a execução aqui
+elif authentication_status == None:
+    st.warning('Por favor, insira seu usuário e senha')
+    st.stop()
+
+# --- SE CHEGOU AQUI, O USUÁRIO ESTÁ LOGADO ---
+st.sidebar.write(f"Bem-vindo, **{name}**!")
+if authenticator.logout('Sair', 'sidebar'):
+    st.rerun()
 
 # --- 1. CONFIGURAÇÕES ---
 # Substitua pela sua chave do Google AI Studio
@@ -247,5 +275,6 @@ if prompt := st.chat_input("Como posso te ajudar?"):
                 )
             except Exception as e:
                 st.error(f"Erro no Sophos: {e}")
+
 
 
