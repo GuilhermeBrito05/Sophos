@@ -33,7 +33,7 @@ with open ('config.yaml') as file:
 
 authenticator = stauth.Authenticate(
     config['credentials']
-    config['cookie']['name]
+    config['cookie']['name']
     config['cookie']['key']
     config['cookie']['expiry_days']
     config['preauthorized']
@@ -294,6 +294,7 @@ if prompt := st.chat_input("Como posso te ajudar?"):
                 )
             except Exception as e:
                 st.error(f"Erro no Sophos: {e}")
+
 
 
 
