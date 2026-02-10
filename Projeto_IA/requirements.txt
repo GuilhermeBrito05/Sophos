@@ -3,4 +3,5 @@ google-generativeai
 requests
 pillow
 firebase-admin
+streamlit-google-oauth
 streamlit-authenticator @ git+https://github.com/mkhorasani/Streamlit-Authenticator.git
