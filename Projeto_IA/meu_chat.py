@@ -13,38 +13,31 @@ from yaml.loader import SafeLoader
 from streamlit_google_auth import Authenticate
 from PIL import Image
 
-placeholder = st.empty()
-
-if not st.session_state.get('authenticated'):
-    with placeholder.container():
-        renderizar_login() # Sua função de login
-        st.stop()
-
 # --- FUNÇÃO DE LOGIN DO GOOGLE ---
-def renderizar_login():
-    st.markdown("""
-        <div style='text-align: center;'>
-            <h1>🛡️ Sophos AI</h1>
-            <p>Faça login para continuar</p>
-        </div>
-    """, unsafe_allow_html=True)
+def mostrar_tela_login():
+    st.title("🛡️ Sophos AI")
+    # Coloque aqui o seu componente de login (Google ou Email)
+    if st.button("Logar com Google", key="btn_google_unique"):
+        # Lógica de autenticação
+        st.session_state.authenticated = True
+        st.rerun() # O rerun aqui é seguro porque mudará o estado
 
-# Centralizando o botão de login
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        if st.button("🌐 Entrar com Google", use_container_width=True):
-            # Lógica de redirecionamento (isso será processado pelo Firebase)
-            st.info("Redirecionando para o Google...")
-            # st.session_state.authenticated = True  # Simulação para teste
-            # st.rerun()
+def mostrar_chat_principal():
+    st.sidebar.title("Configurações")
+    # Todo o seu código de chat (Gemini, historico, etc) vai aqui
+    if st.sidebar.button("Sair"):
+        st.session_state.authenticated = False
+        st.rerun()
 
-# --- LÓGICA DE CONTROLE DE ACESSO ---
+# 2. A Lógica de Controle (O "Switch")
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 
+# IMPORTANTE: Não coloque nenhum st.write ou st.image fora destes blocos!
 if not st.session_state.authenticated:
-    renderizar_login()
-    st.stop()  # Para o código aqui até que o login seja feito
+    mostrar_tela_login()
+else:
+    mostrar_chat_principal()  # Para o código aqui até que o login seja feito
 
 # Inicializa o autenticador do Google
 auth_google = Authenticate(
@@ -389,6 +382,7 @@ if prompt := st.chat_input("Como posso te ajudar?"):
                 registrar_mensagem("assistant", response.text)
             except Exception as e:
                 st.error(f"Erro no Sophos: {e}")
+
 
 
 
