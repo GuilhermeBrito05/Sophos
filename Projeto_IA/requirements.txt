@@ -6,4 +6,3 @@ firebase-admin
 streamlit-google-oauth
 streamlit-google-auth
 streamlit-authenticator @ git+https://github.com/mkhorasani/Streamlit-Authenticator.git
-
