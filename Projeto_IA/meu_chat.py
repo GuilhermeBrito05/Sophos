@@ -6,9 +6,63 @@ import io
 import streamlit_authenticator as stauth
 import yaml
 import firebase_admin
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
 from firebase_admin import credentials, auth, firestore
 from yaml.loader import SafeLoader
 from PIL import Image
+
+# --- FUNÇÃO DE LOGIN DO GOOGLE ---
+def renderizar_login():
+    st.markdown("""
+        <div style='text-align: center;'>
+            <h1>🛡️ Sophos AI</h1>
+            <p>Faça login para continuar</p>
+        </div>
+    """, unsafe_allow_html=True)
+
+# Centralizando o botão de login
+ol1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        if st.button("🌐 Entrar com Google", use_container_width=True):
+            # Lógica de redirecionamento (isso será processado pelo Firebase)
+            st.info("Redirecionando para o Google...")
+            # st.session_state.authenticated = True  # Simulação para teste
+            # st.rerun()
+
+# --- LÓGICA DE CONTROLE DE ACESSO ---
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+
+if not st.session_state.authenticated:
+    renderizar_login()
+    st.stop()  # Para o código aqui até que o login seja feito
+
+st.sidebar.success(f"Logado como: {st.session_state.get('user_email', 'Usuário')}")
+
+def registrar_mensagem(role, content, msg_type="text"):
+    # 1. Salva no histórico temporário (o que você já fazia)
+    st.session_state.historico_chats[st.session_state.chat_ativo].append(
+        {"role": role, "content": content, "type": msg_type}
+    )
+    
+    # 2. Salva no Firebase (A nova lógica moderna)
+    if st.session_state.get('authenticated'):
+        try:
+            user_email = st.session_state.user_email
+            chat_id = st.session_state.chat_ativo
+            
+            doc_ref = db.collection('usuarios').document(user_email).collection('chats').document(chat_id)
+            doc_ref.set({
+                'mensagens': firestore.ArrayUnion([{
+                    'role': role,
+                    'content': content,
+                    'type': msg_type,
+                    'timestamp': datetime.datetime.now()
+                }])
+            }, merge=True)
+        except Exception as e:
+            print(f"Erro ao salvar no Firebase: {e}")
 
 # Inicializa o Firebase (apenas uma vez)
 if not firebase_admin._apps:
@@ -233,7 +287,8 @@ for msg in st.session_state.historico_chats[st.session_state.chat_ativo]:
 
 # Entrada do usuário
 if prompt := st.chat_input("Como posso te ajudar?"):
-    st.session_state.historico_chats[st.session_state.chat_ativo].append({"role": "user", "content": prompt, "type": "text"})
+    registrar_mensagem("user", prompt) 
+    
     with st.chat_message("user", avatar="Projeto_IA/user_icon.png"):
         st.markdown(prompt)
 
@@ -292,9 +347,7 @@ if prompt := st.chat_input("Como posso te ajudar?"):
                 img_data = buscar_imagem(prompt_ai)
                 if img_data:
                     st.image(img_data)
-                    st.session_state.historico_chats[st.session_state.chat_ativo].append(
-                        {"role": "assistant", "content": img_data, "type": "image"}
-                    )
+                    registrar_mensagem("assistant", img_data, "image")
                 else:
                     st.error("Desculpe, não consegui completar o desenho agora.")
         
@@ -304,11 +357,10 @@ if prompt := st.chat_input("Como posso te ajudar?"):
                 # Aqui o Gemini responde normalmente
                 response = model_gemini.generate_content(prompt)
                 st.markdown(response.text)
-                st.session_state.historico_chats[st.session_state.chat_ativo].append(
-                    {"role": "assistant", "content": response.text, "type": "text"}
-                )
+                registrar_mensagem("assistant", response.text)
             except Exception as e:
                 st.error(f"Erro no Sophos: {e}")
+
 
 
 
