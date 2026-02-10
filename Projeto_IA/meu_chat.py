@@ -13,6 +13,13 @@ from yaml.loader import SafeLoader
 from streamlit_google_auth import Authenticate
 from PIL import Image
 
+placeholder = st.empty()
+
+if not st.session_state.get('authenticated'):
+    with placeholder.container():
+        renderizar_login() # Sua função de login
+        st.stop()
+
 # --- FUNÇÃO DE LOGIN DO GOOGLE ---
 def renderizar_login():
     st.markdown("""
@@ -58,6 +65,7 @@ if not st.session_state.get('connected'):
 # Se chegou aqui, extraímos as informações
 st.session_state.authenticated = True
 st.session_state.user_email = st.session_state.get('user_info', {}).get('email')
+placeholder.empty()
 
 st.sidebar.success(f"Logado como: {st.session_state.get('user_email', 'Usuário')}")
 
@@ -381,6 +389,7 @@ if prompt := st.chat_input("Como posso te ajudar?"):
                 registrar_mensagem("assistant", response.text)
             except Exception as e:
                 st.error(f"Erro no Sophos: {e}")
+
 
 
 
