@@ -2,4 +2,5 @@ streamlit
 google-generativeai
 requests
 pillow
+firebase-admin
 streamlit-authenticator @ git+https://github.com/mkhorasani/Streamlit-Authenticator.git
