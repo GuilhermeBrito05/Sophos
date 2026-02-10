@@ -5,8 +5,23 @@ import requests
 import io
 import streamlit_authenticator as stauth
 import yaml
+import firebase_admin
+from firebase_admin import credentials, auth, firestore
 from yaml.loader import SafeLoader
 from PIL import Image
+
+# Inicializa o Firebase (apenas uma vez)
+if not firebase_admin._apps:
+    # Cria um dicionário a partir dos secrets para o Firebase
+    firebase_creds = dict(st.secrets["firebase_service_account"])
+    # Correção necessária para quebras de linha na chave privada
+    firebase_creds["private_key"] = firebase_creds["private_key"].replace("\\n", "\n")
+    
+    cred = credentials.Certificate(firebase_creds)
+    firebase_admin.initialize_app(cred)
+
+# Conexão com o Banco de Dados para salvar os chats futuramente
+db = firestore.client()
 
 def tela_login():
     st.title("🛡️ Acesso ao Sophos")
@@ -294,6 +309,7 @@ if prompt := st.chat_input("Como posso te ajudar?"):
                 )
             except Exception as e:
                 st.error(f"Erro no Sophos: {e}")
+
 
 
 
