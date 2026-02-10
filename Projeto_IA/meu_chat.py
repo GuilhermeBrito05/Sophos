@@ -8,6 +8,25 @@ import yaml
 from yaml.loader import SafeLoader
 from PIL import Image
 
+def tela_login():
+    st.title("🛡️ Acesso ao Sophos")
+
+    if "user_info" not in st.session_state:
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("Entrar com Google", use_container_width=True):
+                # Lógica de redirecionamento Google OAuth
+                pass
+        with col2:
+            if st.button("📧 Entrar com E-mail", use_container_width=True):
+                # Lógica de formulário Firebase
+                pass
+        st.stop() # Bloqueia o app até logar
+
+# Chama a função no início
+if "authenticated" not in st.session_state:
+    tela_login()
+
 # --- SISTEMA DE LOGIN ---
 with open ('config.yaml') as file:
     config = yaml.load(file, Loader=SafeLoader)
@@ -275,6 +294,7 @@ if prompt := st.chat_input("Como posso te ajudar?"):
                 )
             except Exception as e:
                 st.error(f"Erro no Sophos: {e}")
+
 
 
 
