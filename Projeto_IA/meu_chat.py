@@ -10,6 +10,7 @@ from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 from firebase_admin import credentials, auth, firestore
 from yaml.loader import SafeLoader
+from streamlit_google_auth import Authenticate
 from PIL import Image
 
 # --- FUNÇÃO DE LOGIN DO GOOGLE ---
@@ -37,6 +38,26 @@ if "authenticated" not in st.session_state:
 if not st.session_state.authenticated:
     renderizar_login()
     st.stop()  # Para o código aqui até que o login seja feito
+
+# Inicializa o autenticador do Google
+auth_google = Authenticate(
+    secret_credentials_path='google_oauth', # Ele vai buscar nos secrets
+    cookie_name='sophos_login_cookie',
+    cookie_key='chave_aleatoria_para_cookie',
+    redirect_uri='https://seu-app.streamlit.app'
+)
+
+# Verifica se o usuário já está logado
+auth_google.check_authentification()
+
+if not st.session_state.get('connected'):
+    # Exibe o botão oficial do Google
+    auth_google.login()
+    st.stop() # Trava o app aqui
+
+# Se chegou aqui, extraímos as informações
+st.session_state.authenticated = True
+st.session_state.user_email = st.session_state.get('user_info', {}).get('email')
 
 st.sidebar.success(f"Logado como: {st.session_state.get('user_email', 'Usuário')}")
 
@@ -360,6 +381,7 @@ if prompt := st.chat_input("Como posso te ajudar?"):
                 registrar_mensagem("assistant", response.text)
             except Exception as e:
                 st.error(f"Erro no Sophos: {e}")
+
 
 
 
