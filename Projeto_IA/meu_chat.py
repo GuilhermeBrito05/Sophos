@@ -3,7 +3,7 @@ import google.generativeai as genai
 import datetime
 import requests
 import io
-import streamlit-authenticator as stauth
+import streamlit_authenticator as stauth
 import yaml
 from yaml.loader import SafeLoader
 from PIL import Image
@@ -294,6 +294,7 @@ if prompt := st.chat_input("Como posso te ajudar?"):
                 )
             except Exception as e:
                 st.error(f"Erro no Sophos: {e}")
+
 
 
 
