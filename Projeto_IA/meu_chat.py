@@ -22,7 +22,7 @@ def renderizar_login():
     """, unsafe_allow_html=True)
 
 # Centralizando o botão de login
-ol1, col2, col3 = st.columns([1, 2, 1])
+col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         if st.button("🌐 Entrar com Google", use_container_width=True):
             # Lógica de redirecionamento (isso será processado pelo Firebase)
@@ -360,6 +360,7 @@ if prompt := st.chat_input("Como posso te ajudar?"):
                 registrar_mensagem("assistant", response.text)
             except Exception as e:
                 st.error(f"Erro no Sophos: {e}")
+
 
 
 
