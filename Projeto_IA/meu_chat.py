@@ -131,8 +131,9 @@ with st.sidebar:
 st.title("🛡️ Sophos Intelligence")
 
 # Mostrar mensagens anteriores do chat ativo
-for msg in st.session_state.historico_chats[st.session_state.chat_ativo]:
-    with st.chat_message(msg["role"]):
+for i, msg in enumerate(st.session_state.historico_chats[st.session_state.chat_ativo]):
+    # A chave ajuda o React a não se perder na renderização
+    with st.chat_message(msg["role"], key=f"msg_{st.session_state.chat_ativo}_{i}"):
         if msg["type"] == "text":
             st.markdown(msg["content"])
         else:
