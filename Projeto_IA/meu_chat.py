@@ -87,7 +87,7 @@ with st.sidebar:
         st.rerun()
 
 # --- 6. ÁREA DE MENSAGENS ---
-st.image("sophos.png", width=70)
+st.image("Projeto_IA/sophos.png", width=70)
 
 chat_placeholder = st.container()
 
