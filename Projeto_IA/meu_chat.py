@@ -3,186 +3,162 @@ import google.generativeai as genai
 import datetime
 import requests
 import io
-import firebase_admin
-from firebase_admin import credentials, firestore
 from PIL import Image
-from streamlit_google_auth import Authenticate
 
-# --- 1. CONFIGURAÇÃO DA PÁGINA (OBRIGATORIAMENTE O PRIMEIRO COMANDO) ---
-st.set_page_config(page_title="Sophos AI", layout="wide", page_icon="🛡️")
+# --- 1. CONFIGURAÇÕES ---
+# Substitua pela sua chave do Google AI Studio
+GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
+genai.configure(api_key=GOOGLE_API_KEY)
 
-# --- 2. INICIALIZAÇÃO DO FIREBASE ---
-if not firebase_admin._apps:
+# --- 2. FUNÇÃO DE IA ---
+@st.cache_resource
+def carregar_modelo():
     try:
-        firebase_creds = dict(st.secrets["firebase_service_account"])
-        firebase_creds["private_key"] = firebase_creds["private_key"].replace("\\n", "\n")
-        cred = credentials.Certificate(firebase_creds)
-        firebase_admin.initialize_app(cred)
+        return genai.GenerativeModel(model_name="gemini-2.5-flash")
     except Exception as e:
-        st.error(f"Erro ao configurar Firebase: {e}")
-        st.stop()
+        st.error(f"Erro ao carregar Gemini: {e}")
+        return None
 
-db = firestore.client()
+model_gemini = carregar_modelo()
 
-# --- 3. AUTENTICAÇÃO GOOGLE ---
-# Certifique-se de ter 'google_oauth' configurado nos seus secrets/arquivos
-auth_google = Authenticate(
-    secret_credentials_path='google_oauth', 
-    cookie_name='sophos_login_cookie',
-    cookie_key=st.secrets.get("COOKIE_KEY", "chave_padrao_123"),
-    redirect_uri='https://seu-app.streamlit.app'
-)
-
-auth_google.check_authentification()
-
-# Tela de Login se não estiver conectado
-if not st.session_state.get('connected'):
-    st.title("🛡️ Bem-vindo ao Sophos AI")
-    st.info("Para continuar, realize o login com sua conta Google.")
-    auth_google.login()
-    st.stop()
-
-# Dados do usuário logado
-user_info = st.session_state.get('user_info', {})
-user_email = user_info.get('email')
-
-# --- 4. CONFIGURAÇÃO DA IA (GEMINI) ---
-try:
-    genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
-    model_gemini = genai.GenerativeModel(model_name="gemini-1.5-flash")
-except Exception as e:
-    st.error(f"Erro ao configurar API do Gemini: {e}")
-    st.stop()
-
-# --- 5. GERENCIAMENTO DE ESTADO DO CHAT ---
+# --- 3. GERENCIAMENTO DE ESTADO (MULTI-CHAT) ---
 if "historico_chats" not in st.session_state:
-    st.session_state.historico_chats = {}
+    st.session_state.historico_chats = {} 
 
-if "chat_ativo" not in st.session_state or st.session_state.chat_ativo is None:
+if "chat_ativo" not in st.session_state:
+    st.session_state.chat_ativo = None
+
+def criar_novo_chat():
+    # Nomeia o chat com a hora atual para o histórico
     novo_id = f"Conversa {datetime.datetime.now().strftime('%H:%M:%S')}"
     st.session_state.historico_chats[novo_id] = []
     st.session_state.chat_ativo = novo_id
 
-# --- 6. FUNÇÕES AUXILIARES ---
+if not st.session_state.chat_ativo:
+    criar_novo_chat()
 
-def registrar_mensagem(role, content, msg_type="text"):
-    """Salva no estado local e tenta persistir no Firebase."""
-    st.session_state.historico_chats[st.session_state.chat_ativo].append(
-        {"role": role, "content": content, "type": msg_type}
-    )
-    
-    try:
-        doc_ref = db.collection('usuarios').document(user_email).collection('chats').document(st.session_state.chat_ativo)
-        # Firebase não suporta salvar bytes brutos (imagens) facilmente em ArrayUnion, 
-        # aqui salvamos apenas os metadados ou textos.
-        if msg_type == "text":
-            doc_ref.set({
-                'mensagens': firestore.ArrayUnion([{
-                    'role': role,
-                    'content': content,
-                    'type': msg_type,
-                    'timestamp': datetime.datetime.now()
-                }])
-            }, merge=True)
-    except Exception as e:
-        print(f"Erro ao salvar no Firebase: {e}")
-
+# --- 4. FUNÇÃO RESILIENTE DE IMAGEM (ANTI-RATE LIMIT) ---
 def buscar_imagem(prompt):
-    """Gera imagem via API Pollinations."""
     prompt_enc = requests.utils.quote(prompt)
     seed = datetime.datetime.now().microsecond
-    url = f"https://gen.pollinations.ai/image/{prompt_enc}?model=flux&seed={seed}&nologo=true"
-    headers = {"Authorization": f"Bearer {st.secrets['POLLINATIONS_API_KEY']}"}
     
-    try:
-        response = requests.get(url, headers=headers, timeout=60)
-        if response.status_code == 200:
-            return response.content
-    except Exception as e:
-        st.error(f"Erro na geração de imagem: {e}")
+    # Lista de motores: 1. IA (Pollinations) | 2. Fotos Reais (Unsplash/LoremFlickr)
+    urls = [
+        f"https://image.pollinations.ai/prompt/{prompt_enc}?width=1024&height=1024&seed={seed}&nologo=true&model=flux",
+        f"https://loremflickr.com/1024/1024/{prompt_enc.split('%20')[-1]}" # Busca por palavra-chave se IA falhar
+    ]
+    
+    for url in urls:
+        try:
+            r = requests.get(url, timeout=20)
+            if r.status_code == 200 and "image" in r.headers.get("Content-Type", ""):
+                return r.content
+        except:
+            continue
     return None
 
-# --- 7. INTERFACE (SIDEBAR) ---
+# --- 5. INTERFACE STREAMLIT ---
+st.set_page_config(page_title="Sophos", layout="wide", page_icon="logo_sophos.png")
+
+# Estilo CSS para melhorar o visual
+st.markdown("""
+    <style>
+    /* Cor do botão principal */
+    div.stButton > button:first-child {
+        background-color: #6A0DAD; /* Roxo vibrante */
+        color: white;
+        border-radius: 10px;
+        border: none;
+        transition: all 0.3s ease;
+    }
+
+    /* Efeito de passar o mouse (Hover) */
+    div.stButton > button:first-child:hover {
+        background-color: #8A2BE2; /* Roxo mais claro ao passar o mouse */
+        color: white;
+        border: none;
+    }
+
+    /* Cor do botão quando clicado */
+    div.stButton > button:first-child:active {
+        background-color: #4B0082;
+        color: white;
+    }
+    
+    /* Cor da borda do chat_input ao clicar (Foco) */
+    .stChatInput:focus-within {
+        border-color: #6A0DAD !important;
+        box-shadow: 0 0 10px rgba(106, 13, 173, 0.5) !important;
+    }
+
+    /* Opcional: Cor do ícone de enviar (setinha) dentro do input */
+    .stChatInput button svg {
+        fill: #FA8072 !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
 with st.sidebar:
-    st.image(user_info.get('picture', ""), width=50)
-    st.write(f"Olá, **{user_info.get('name', 'Usuário')}**")
-    if st.button("Sair"):
-        auth_google.logout()
+    st.title("📂 Seus Chats")
+    if st.button("➕ Iniciar Nova Conversa", use_container_width=True, type="primary"):
+        criar_novo_chat()
         st.rerun()
-
+    
     st.divider()
-    if st.button("➕ Nova Conversa", use_container_width=True, type="primary"):
-        novo_id = f"Conversa {datetime.datetime.now().strftime('%H:%M:%S')}"
-        st.session_state.historico_chats[novo_id] = []
-        st.session_state.chat_ativo = novo_id
-        st.rerun()
-
-    st.subheader("Histórico")
+    st.subheader("Histórico Recente")
     for chat_id in reversed(list(st.session_state.historico_chats.keys())):
-        btn_type = "primary" if chat_id == st.session_state.chat_ativo else "secondary"
-        if st.button(chat_id, key=f"btn_{chat_id}", use_container_width=True, type=btn_type):
+        tipo = "primary" if chat_id == st.session_state.chat_ativo else "secondary"
+        if st.button(chat_id, key=chat_id, use_container_width=True, type=tipo):
             st.session_state.chat_ativo = chat_id
             st.rerun()
 
     st.divider()
-    arquivo_upload = st.file_uploader("Anexar arquivo", type=["png", "jpg", "jpeg", "pdf", "txt"])
+    if st.button("🗑️ Apagar Tudo"):
+        st.session_state.historico_chats = {}
+        st.session_state.chat_ativo = None
+        st.rerun()
 
-# --- 8. ÁREA PRINCIPAL DO CHAT ---
-st.title("🛡️ Sophos Intelligence")
+# --- 6. ÁREA DE MENSAGENS ---
+st.image("sophos.png", width=70) # Ajuste a largura conforme necessário
 
-# Mostrar mensagens anteriores do chat ativo
-for i, msg in enumerate(st.session_state.historico_chats[st.session_state.chat_ativo]):
-    # A chave ajuda o React a não se perder na renderização
-    with st.chat_message(msg["role"], key=f"msg_{st.session_state.chat_ativo}_{i}"):
+# Exibe histórico do chat selecionado
+for msg in st.session_state.historico_chats[st.session_state.chat_ativo]:
+    # Define o ícone: se for assistente usa a logo, se for usuário usa outro ou deixa padrão
+    icone = "logo_sophos.png" if msg["role"] == "assistant" else "user_icon.png"
+    
+    with st.chat_message(msg["role"], avatar=icone):
         if msg["type"] == "text":
             st.markdown(msg["content"])
         else:
             st.image(msg["content"])
 
-# Entrada do Usuário
-if prompt := st.chat_input("Como posso ajudar hoje?"):
-    # 1. Mostrar e registrar pergunta do usuário
-    with st.chat_message("user"):
+# Entrada do usuário
+if prompt := st.chat_input("Como posso te ajudar?"):
+    # Salva e exibe pergunta
+    st.session_state.historico_chats[st.session_state.chat_ativo].append({"role": "user", "content": prompt, "type": "text"})
+    with st.chat_message("user", avatar="user_icon.png"):
         st.markdown(prompt)
-    registrar_mensagem("user", prompt)
 
-    # 2. Resposta do Assistente
-    with st.chat_message("assistant"):
-        # Lógica para Geração de Imagem
-        if any(keyword in prompt.lower() for keyword in ["crie", "gere", "desenhe", "imagem"]):
-            with st.spinner("🎨 Desenhando..."):
-                # Refinamento de prompt opcional com Gemini
-                prompt_refinado = model_gemini.generate_content(f"Create a detailed image prompt in English for: {prompt}").text
-                img_data = buscar_imagem(prompt_refinado)
+    with st.chat_message("assistant", avatar="logo_sophos.png"):
+        # LÓGICA DE IMAGEM
+        if any(p in prompt.lower() for p in ["crie", "gere", "desenhe", "foto", "imagem"]):
+            with st.spinner("🎨 Sophos desenhando..."):
+                img_data = buscar_imagem(prompt)
                 if img_data:
                     st.image(img_data)
-                    registrar_mensagem("assistant", img_data, "image")
+                    st.session_state.historico_chats[st.session_state.chat_ativo].append(
+                        {"role": "assistant", "content": img_data, "type": "image"}
+                    )
                 else:
-                    st.error("Não consegui gerar a imagem.")
+                    st.error("Servidores de imagem ocupados. Tente um prompt mais simples.")
         
-        # Lógica de Texto/Arquivo
+        # LÓGICA DE TEXTO
         else:
-            with st.spinner("Thinking..."):
-                conteudo_envio = [prompt]
-                if arquivo_upload:
-                    bytes_data = arquivo_upload.read()
-                    if arquivo_upload.type.startswith("image"):
-                        img = Image.open(io.BytesIO(bytes_data))
-                        conteudo_envio.append(img)
-                    else:
-                        conteudo_envio.append({"mime_type": arquivo_upload.type, "data": bytes_data})
-                
-                try:
-                    response = model_gemini.generate_content(conteudo_envio)
-                    st.markdown(response.text)
-                    registrar_mensagem("assistant", response.text)
-                except Exception as e:
-                    st.error(f"Erro no processamento: {e}")
-
-# --- 9. ESTILO CSS ---
-st.markdown("""
-    <style>
-    .stChatInput:focus-within { border-color: #6A0DAD !important; }
-    div.stButton > button:first-child { border-radius: 8px; }
-    </style>
-    """, unsafe_allow_html=True)
+            try:
+                response = model_gemini.generate_content(prompt)
+                st.markdown(response.text)
+                st.session_state.historico_chats[st.session_state.chat_ativo].append(
+                    {"role": "assistant", "content": response.text, "type": "text"}
+                )
+            except Exception as e:
+                st.error(f"Erro no Sophos: {e}")
