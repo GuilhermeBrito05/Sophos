@@ -14,7 +14,11 @@ genai.configure(api_key=GOOGLE_API_KEY)
 @st.cache_resource
 def carregar_modelo():
     try:
-        return genai.GenerativeModel(model_name="gemini-2.5-flash")
+        # Tentando o 2.0 Flash (Versão experimental mais recente)
+        return genai.GenerativeModel(model_name="gemini-2.0-flash-exp")
+    except Exception:
+        # Se o 2.0 falhar, volta para o 1.5 estável
+        return genai.GenerativeModel(model_name="gemini-1.5-flash")
     except Exception as e:
         st.error(f"Erro ao carregar Gemini: {e}")
         return None
