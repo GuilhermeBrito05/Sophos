@@ -7,21 +7,14 @@ import os
 from PIL import Image
 
 # --- 1. CONFIGURAÇÕES ---
-GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
-genai.configure(api_key=GOOGLE_API_KEY)
+if "GOOGLE_API_KEY" in st.secrets:
+    genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
+else:
+    st.error("Chave API não encontrada nos Secrets!")
 
-# --- 2. FUNÇÃO DE IA ---
 @st.cache_resource
 def carregar_modelo():
-    try:
-        # Tentando o 2.0 Flash (Versão experimental mais recente)
-        return genai.GenerativeModel(model_name="gemini-2.0-flash-exp")
-    except Exception:
-        # Se o 2.0 falhar, volta para o 1.5 estável
-        return genai.GenerativeModel(model_name="gemini-1.5-flash")
-    except Exception as e:
-        st.error(f"Erro ao carregar Gemini: {e}")
-        return None
+    return genai.GenerativeModel('gemini-1.5-flash')
 
 model_gemini = carregar_modelo()
 
