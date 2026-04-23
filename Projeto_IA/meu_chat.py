@@ -3,6 +3,7 @@ import google.generativeai as genai
 import datetime
 import requests
 import io
+import os
 from PIL import Image
 
 # --- 1. CONFIGURAÇÕES ---
@@ -93,7 +94,7 @@ chat_placeholder = st.container()
 
 with chat_placeholder:
     for i, msg in enumerate(st.session_state.historico_chats[st.session_state.chat_ativo]):
-        icone = "logo_sophos.png" if msg["role"] == "assistant" else "user_icon.png"
+        icone = "Projeto/IA/logo_sophos.png" if msg["role"] == "assistant" else "Projeto_IA/user_icon.png"
         
         with st.chat_message(msg["role"], avatar=icone):
             if msg["type"] == "text":
@@ -111,7 +112,7 @@ if prompt := st.chat_input("Como posso te ajudar?"):
 if st.session_state.historico_chats[st.session_state.chat_ativo] and st.session_state.historico_chats[st.session_state.chat_ativo][-1]["role"] == "user":
     ultima_msg = st.session_state.historico_chats[st.session_state.chat_ativo][-1]["content"]
     
-    with st.chat_message("assistant", avatar="logo_sophos.png"):
+    with st.chat_message("assistant", avatar="Projeto_IA/logo_sophos.png"):
         if any(p in ultima_msg.lower() for p in ["crie", "gere", "desenhe", "foto", "imagem"]):
             with st.spinner("🎨 Sophos desenhando..."):
                 img_data = buscar_imagem(ultima_msg)
