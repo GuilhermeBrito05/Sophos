@@ -30,7 +30,7 @@ def criar_novo_chat():
     st.session_state.historico_chats[novo_id] = []
     st.session_state.chat_ativo = novo_id
 
-if not st.session_state.chat_ativo:
+if st.session_state.chat_ativo is None:
     criar_novo_chat()
 
 # --- 4. FUNÇÃO DE IMAGEM ---
