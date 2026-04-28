@@ -3,7 +3,6 @@ Chat IA em aprimoramento.
 
 ### Tecnologias
 * Python
-* Machine Learning
 
 ### Sobre
 
