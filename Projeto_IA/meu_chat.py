@@ -85,11 +85,11 @@ with st.sidebar:
         st.rerun()
 
 # --- 6. ÁREA DE MENSAGENS ---
-# --- 6. ÁREA DE MENSAGENS ---
 st.image("Projeto_IA/sophos.png", width=70)
 
-# SÓ executa se houver um chat ativo e se ele estiver no histórico
-if st.session_state.chat_ativo and st.session_state.chat_ativo in st.session_state.historico_chats:
+if ("chat_ativo" in st.session_state and 
+    st.session_state.chat_ativo is not None and 
+    st.session_state.chat_ativo in st.session_state.historico_chats):
     
     chat_placeholder = st.container()
 
