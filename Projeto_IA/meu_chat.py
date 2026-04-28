@@ -85,49 +85,54 @@ with st.sidebar:
         st.rerun()
 
 # --- 6. ÁREA DE MENSAGENS ---
+# --- 6. ÁREA DE MENSAGENS ---
 st.image("Projeto_IA/sophos.png", width=70)
 
-chat_placeholder = st.container()
-
-with chat_placeholder:
-    for i, msg in enumerate(st.session_state.historico_chats[st.session_state.chat_ativo]):
-        icone = "Projeto/IA/logo_sophos.png" if msg["role"] == "assistant" else "Projeto_IA/user_icon.png"
-        
-        with st.chat_message(msg["role"], avatar=icone):
-            if msg["type"] == "text":
-                st.markdown(msg["content"])
-            else:
-                st.image(msg["content"], caption=f"Gerada por Sophos - {i}", use_container_width=True)
-
-# Entrada do usuário
-if prompt := st.chat_input("Como posso te ajudar?"):
-    st.session_state.historico_chats[st.session_state.chat_ativo].append({"role": "user", "content": prompt, "type": "text"})
-
-    st.rerun()
-
-# Lógica de Resposta (fora do bloco de input para estabilidade)
-if st.session_state.historico_chats[st.session_state.chat_ativo] and st.session_state.historico_chats[st.session_state.chat_ativo][-1]["role"] == "user":
-    ultima_msg = st.session_state.historico_chats[st.session_state.chat_ativo][-1]["content"]
+# SÓ executa se houver um chat ativo e se ele estiver no histórico
+if st.session_state.chat_ativo and st.session_state.chat_ativo in st.session_state.historico_chats:
     
-    with st.chat_message("assistant", avatar="Projeto_IA/logo_sophos.png"):
-        if any(p in ultima_msg.lower() for p in ["crie", "gere", "desenhe", "foto", "imagem"]):
-            with st.spinner("🎨 Sophos desenhando..."):
-                img_data = buscar_imagem(ultima_msg)
-                if img_data:
-                    st.image(img_data, use_container_width=True)
-                    st.session_state.historico_chats[st.session_state.chat_ativo].append(
-                        {"role": "assistant", "content": img_data, "type": "image"}
-                    )
+    chat_placeholder = st.container()
+
+    with chat_placeholder:
+        for i, msg in enumerate(st.session_state.historico_chats[st.session_state.chat_ativo]):
+            # Corrigi o caminho da logo que estava "Projeto/IA" (com barra extra)
+            icone = "Projeto_IA/logo_sophos.png" if msg["role"] == "assistant" else "Projeto_IA/user_icon.png"
+            
+            with st.chat_message(msg["role"], avatar=icone):
+                if msg["type"] == "text":
+                    st.markdown(msg["content"])
                 else:
-                    st.error("Servidores de imagem ocupados.")
-        else:
-            try:
-                response = model_gemini.generate_content(ultima_msg)
-                st.markdown(response.text)
-                st.session_state.historico_chats[st.session_state.chat_ativo].append(
-                    {"role": "assistant", "content": response.text, "type": "text"}
-                )
-            except Exception as e:
-                st.error(f"Erro no Sophos: {e}")
-    
-    st.rerun()
+                    st.image(msg["content"], caption=f"Gerada por Sophos - {i}", use_container_width=True)
+
+    # Entrada do usuário
+    if prompt := st.chat_input("Como posso te ajudar?"):
+        st.session_state.historico_chats[st.session_state.chat_ativo].append({"role": "user", "content": prompt, "type": "text"})
+        st.rerun()
+
+    # Lógica de Resposta
+    if st.session_state.historico_chats[st.session_state.chat_ativo] and st.session_state.historico_chats[st.session_state.chat_ativo][-1]["role"] == "user":
+        ultima_msg = st.session_state.historico_chats[st.session_state.chat_ativo][-1]["content"]
+        
+        with st.chat_message("assistant", avatar="Projeto_IA/logo_sophos.png"):
+            if any(p in ultima_msg.lower() for p in ["crie", "gere", "desenhe", "foto", "imagem"]):
+                with st.spinner("🎨 Sophos desenhando..."):
+                    img_data = buscar_imagem(ultima_msg)
+                    if img_data:
+                        st.image(img_data, use_container_width=True)
+                        st.session_state.historico_chats[st.session_state.chat_ativo].append(
+                            {"role": "assistant", "content": img_data, "type": "image"}
+                        )
+                    else:
+                        st.error("Servidores de imagem ocupados.")
+            else:
+                try:
+                    response = model_gemini.generate_content(ultima_msg)
+                    st.markdown(response.text)
+                    st.session_state.historico_chats[st.session_state.chat_ativo].append(
+                        {"role": "assistant", "content": response.text, "type": "text"}
+                    )
+                except Exception as e:
+                    st.error(f"Erro no Sophos: {e}")
+        st.rerun()
+else:
+    st.info("Clique em 'Iniciar Nova Conversa' ou selecione um chat ao lado.")
