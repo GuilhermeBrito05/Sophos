@@ -14,7 +14,7 @@ else:
 
 @st.cache_resource
 def carregar_modelo():
-    return genai.GenerativeModel('gemini-1.5-flash')
+    return genai.GenerativeModel('models/gemini-1.5-flash')
 
 model_gemini = carregar_modelo()
 
